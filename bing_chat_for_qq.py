@@ -22,10 +22,11 @@ from EdgeGPT import Chatbot, ConversationStyle
 from PIL import Image
 from pygtrans import Translate
 from requests import RequestException
+from uiautomation import WindowControl
 
 parser = argparse.ArgumentParser(description="A script to process files")
 # 发送窗口
-parser.add_argument("-sender", "--sender", help="QQ title", default='托洛茨基')
+parser.add_argument("-sender", "--sender", help="QQ title", default='12')
 # 凭证
 parser.add_argument("-c", "--cookies", help="cookies_.json path", default='./cookies.json')
 # 需要检查的机器人在群里的名称
@@ -36,7 +37,9 @@ parser.add_argument("--quiet", type=str)
 args = parser.parse_args()
 
 # 各种临时文件
-path = "d:/"
+path = os.path.split(os.path.realpath(__file__))[0] + "/temp/" + args.sender + "/"
+if not os.path.exists(path):
+    os.makedirs(path)
 source = path + args.sender + "_source.png"
 idea_ = path + args.sender + "_idea.txt"
 say = path + args.sender + "_say.txt"
@@ -64,7 +67,7 @@ def task(fl_):
     global bot
 
     if init == 0:
-        # send_info_to_qq("Bing Chat已上线，@bot提问，结尾可用：.c灵活，.b平衡，.p精确，.d绘画，.r重置，默认.c")
+        send_info_to_qq("Bing Chat已上线，@bot提问，结尾可用：.c灵活，.b平衡，.p精确，.d绘画，.r重置，默认.c")
         init = 1
 
     m_r = get_refresh_messages()
@@ -260,8 +263,7 @@ def send(is_sort=True):
     if text != '':
 
         send_w = auto.WindowControl(searchDepth=1, Name=args.sender)
-        send_w.SetActive()
-        send_w.SetTopmost(True)
+        active_window(send_w)
 
         text = re.sub(r"\[\^(\d+)\^\]", r"[\1]", text)
 
@@ -331,12 +333,38 @@ def to_special_group(group):
         message_manager_main_w.GetChildren()[2].GetChildren()[0].GetChildren()[1].GetChildren()[0].GetChildren()[
             1].GetChildren()[0]
     special_chat = chat_list.ListItemControl(searchDepth=1, Name=group)
-    special_chat.Click()
+    # special_chat.Click()
+    # time.sleep(0.1)
+    special_chat.DoubleClick()
+
+    message_infos_w = message_manager_main_w.ListControl(searchDepth=10, Name="IEMsgView")
+    message_infos_w_p = message_infos_w.GetParentControl()
+    reset_but = message_infos_w_p.GetChildren()[2].GetChildren()[1].GetChildren()[4]
+    reset_but.Click()
+
+    while len(get_no_refresh_messages()) >= 60:
+        next_messages_page()
+
+
+def active_window(w: WindowControl):
+    w.SetActive()
+    w.SetTopmost(True)
+
+
+def get_no_refresh_messages():
+    active_window(message_manager_main_w)
+
+    message_infos_w = message_manager_main_w.ListControl(searchDepth=10, Name="IEMsgView")
+
+    messages = []
+    for message_info in message_infos_w.GetChildren():
+        messages.append(message_info.Name)
+
+    return messages
 
 
 def get_refresh_messages():
-    message_manager_main_w.SetActive()
-    message_manager_main_w.SetTopmost(True)
+    active_window(message_manager_main_w)
 
     message_infos_w = message_manager_main_w.ListControl(searchDepth=10, Name="IEMsgView")
 
@@ -382,13 +410,14 @@ def get_unread_messages(messages: list):
 def next_messages_page():
     message_infos_w = message_manager_main_w.ListControl(searchDepth=10, Name="IEMsgView")
     message_infos_w_p = message_infos_w.GetParentControl()
+
     next_but = message_infos_w_p.GetChildren()[2].GetChildren()[1].GetChildren()[2]
 
-    record_file.seek(0)
-    record_file.truncate(0)
-    record_file.write("0")
-    record_file.seek(0)
-    record_file.flush()
+    # record_file.seek(0)
+    # record_file.truncate(0)
+    # record_file.write("0")
+    # record_file.seek(0)
+    # record_file.flush()
 
     next_but.Click()
 
@@ -418,7 +447,7 @@ def format_messages(messages: list):
 
 def open_message_manager_to_group(Title):
     sub_main_window = auto.WindowControl(searchDepth=1, Name=Title)
-    sub_main_window.SetActive()
+    active_window(sub_main_window)
 
     group_chat = sub_main_window.TabItemControl(searchDepth=10, Name="群聊")
     group_chat.Click()
@@ -460,8 +489,8 @@ def At(who):
 # 初始化
 auto.uiautomation.SetGlobalSearchTimeout(10)
 
-open_qq_from_tools_bar('QQ: robot(3581941688)\r\n声音: 开启\r\n消息提醒框: 关闭\r\n会话消息: 任务栏头像闪动')
-open_chat_window_from_qq_chat_list(args.sender)
+# open_qq_from_tools_bar('QQ: robot(QQ号)\r\n声音: 开启\r\n消息提醒框: 关闭\r\n会话消息: 任务栏头像闪动')
+# open_chat_window_from_qq_chat_list(args.sender)
 
 message_manager_main_w = open_message_manager_to_group("消息管理器")
 to_special_group(args.sender)
@@ -485,8 +514,8 @@ bot = Chatbot(cookies=cookies)
 init = 0
 
 # 抢占文件，保证多个机器人运行
-sit_path = "d:/bingchat_sit.txt"
-sit_path_lock = "d:/bingchat_sit.txt.lock"
+sit_path = path + "bingchat_sit.txt"
+sit_path_lock = path + "d:/bingchat_sit.txt.lock"
 
 if not os.path.exists(save_img_path):
     os.makedirs(save_img_path)
