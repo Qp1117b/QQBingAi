@@ -392,7 +392,7 @@ def get_unread_messages(messages: list):
 
     if len(messages) >= 60:
         next_messages_page()
-        return unread_messages
+        return unread_messages[59]
 
     if last_id is not None and last_id != '':
         last_id_num = int(last_id)
@@ -521,8 +521,8 @@ if not os.path.exists(save_img_path):
     os.makedirs(save_img_path)
 open(idea_, 'w')
 open(say, 'w')
-if not os.path.exists(record_):
-    open(record_, 'w')
+open(record_, 'w')
+
 record_file = open(record_, "r+")
 orgin_idea_ = open(orgin_idea, 'w', encoding='utf-8')
 if not os.path.exists(record_):
